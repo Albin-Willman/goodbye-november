@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hejdå november</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-top: #3b4352;
+    --bg-bottom: #1d222b;
+    --door: #c9b48a;
+    --door-dark: #a8925f;
+    --door-text: #4a3b1d;
+    --ink: #f3efe6;
+    --muted: #aab2c0;
+    --accent: #ffcf6e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(var(--bg-top), var(--bg-bottom)) fixed;
+    overflow-x: hidden;
+  }
+
+  /* November rain */
+  #rain { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+  main { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+
+  header { text-align: center; margin-bottom: 28px; }
+  h1 {
+    font-family: Fraunces, Georgia, serif; font-weight: 700;
+    font-size: clamp(2rem, 6vw, 3.4rem); margin: 0 0 6px; letter-spacing: -0.01em;
+  }
+  .sub { color: var(--muted); margin: 0 0 22px; font-size: 1.05rem; }
+
+  .countdown { display: inline-flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .unit {
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 10px 14px; min-width: 76px; backdrop-filter: blur(4px);
+  }
+  .unit b { display: block; font-family: Fraunces, Georgia, serif; font-size: 1.9rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .unit span { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+  .progress { margin: 22px auto 0; max-width: 420px; }
+  .bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,0.1); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #7fb3d5, var(--accent)); border-radius: 99px; transition: width 1s ease; }
+  .progress small { display: block; margin-top: 6px; color: var(--muted); }
+
+  /* Calendar grid */
+  .grid {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(6, 1fr);
+    grid-auto-flow: dense;
+  }
+  @media (max-width: 760px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 460px) { .grid { grid-template-columns: repeat(3, 1fr); gap: 10px; } }
+
+  .hatch {
+    position: relative; aspect-ratio: 1; perspective: 900px;
+    border-radius: 10px; cursor: pointer; border: 0; padding: 0; background: none;
+    font: inherit; color: inherit;
+  }
+  .hatch.big { grid-column: span 2; grid-row: span 2; aspect-ratio: auto; }
+  .hatch .inside {
+    position: absolute; inset: 0; border-radius: 10px; overflow: hidden;
+    background: #111 center/cover no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), inset 0 6px 18px rgba(0,0,0,0.6);
+  }
+  .hatch .door {
+    position: absolute; inset: 0; border-radius: 10px;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(255,255,255,0.25), transparent 60%),
+      linear-gradient(145deg, var(--door), var(--door-dark));
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(255,255,255,0.18);
+    transform-origin: left center;
+    transition: transform 0.9s cubic-bezier(.3,.7,.3,1), box-shadow 0.9s;
+    display: grid; place-items: center;
+    backface-visibility: hidden;
+  }
+  .hatch .door::after { /* little knob */
+    content: ""; position: absolute; right: 9px; top: 50%; width: 7px; height: 7px; margin-top: -3px;
+    border-radius: 50%; background: var(--door-text); opacity: .45;
+  }
+  .hatch .num {
+    font-family: Fraunces, Georgia, serif; font-weight: 700;
+    font-size: clamp(1.4rem, 4vw, 2.2rem); color: var(--door-text);
+  }
+  .hatch.big .num { font-size: clamp(2.4rem, 8vw, 4rem); }
+  .hatch.open .door { transform: rotateY(-105deg); box-shadow: none; }
+  .hatch.locked { cursor: not-allowed; }
+  .hatch.locked .door { filter: grayscale(.6) brightness(.72); }
+  .hatch.today .door { animation: glow 2s ease-in-out infinite; }
+  @keyframes glow {
+    0%,100% { box-shadow: 0 0 0 2px var(--accent), 0 0 12px 2px rgba(255,207,110,.4); }
+    50%     { box-shadow: 0 0 0 2px var(--accent), 0 0 26px 8px rgba(255,207,110,.65); }
+  }
+  .hatch.shake .door { animation: shake .4s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .hatch:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(120px);
+    background: #2a303b; border: 1px solid rgba(255,255,255,.15); color: var(--ink);
+    padding: 12px 18px; border-radius: 12px; transition: transform .35s; z-index: 30; max-width: calc(100% - 32px); text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 20; display: none; place-items: center;
+    background: rgba(10,12,16,.85); padding: 16px; backdrop-filter: blur(6px);
+  }
+  .lightbox.show { display: grid; animation: fade .3s; }
+  @keyframes fade { from { opacity: 0 } }
+  .card { max-width: 900px; width: 100%; background: #f7f3ea; color: #2b2b2b; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .card img { display: block; width: 100%; max-height: 68vh; object-fit: cover; }
+  .card .text { padding: 16px 20px 20px; }
+  .card .day { font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: #8a7b5a; }
+  .card h2 { font-family: Fraunces, Georgia, serif; margin: 4px 0 6px; font-size: 1.6rem; }
+  .card p { margin: 0; color: #555; line-height: 1.5; }
+  .card .credit { margin-top: 10px; font-size: .75rem; color: #999; }
+  .card .credit a { color: inherit; }
+  .close {
+    position: fixed; top: 14px; right: 16px; background: rgba(255,255,255,.12); color: #fff;
+    border: 0; width: 42px; height: 42px; border-radius: 50%; font-size: 1.4rem; cursor: pointer;
+  }
+
+  .motto { font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 1.15rem; color: var(--ink); margin: 0 0 14px; }
+  footer { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 36px; }
+</style>
+</head>
+<body>
+<canvas id="rain"></canvas>
+
+<main>
+  <header>
+    <h1 id="title">November är snart slut</h1>
+    <p class="sub" id="sub">En lucka om dagen tills november är över. Bakom varje lucka: något som inte är november.</p>
+    <div class="countdown" id="countdown" aria-live="polite">
+      <div class="unit"><b id="d">–</b><span>dagar</span></div>
+      <div class="unit"><b id="h">–</b><span>timmar</span></div>
+      <div class="unit"><b id="m">–</b><span>minuter</span></div>
+      <div class="unit"><b id="s">–</b><span>sekunder</span></div>
+    </div>
+    <div class="progress">
+      <div class="bar"><i id="barFill"></i></div>
+      <small id="barText"></small>
+    </div>
+  </header>
+
+  <section class="grid" id="grid" aria-label="Kalenderluckor"></section>
+
+  <footer><p class="motto">För övrigt anser jag att november borde avskaffas.</p>Foton från <a href="https://unsplash.com" style="color:inherit">Unsplash</a> och <a href="https://commons.wikimedia.org" style="color:inherit">Wikimedia Commons</a>.</footer>
+</main>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lbTitle">
+  <button class="close" id="lbClose" aria-label="Stäng">×</button>
+  <div class="card">
+    <img id="lbImg" alt="">
+    <div class="text">
+      <div class="day" id="lbDay"></div>
+      <h2 id="lbTitle"></h2>
+      <p id="lbText"></p>
+      <div class="credit"><a id="lbLink" target="_blank" rel="noopener">Visa på Unsplash</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- Content: one entry per day of November. Swap `img` for any Unsplash photo id or full URL. ----
+const DAYS = [
+  { img: "1613395877344-13d4a8e0d49e", title: "Santorinis blå", text: "Vita väggar, blå kupoler och ett hav som aldrig tar slut. Inte ett grått moln i sikte." },
+  { img: "1515238152791-8216bfdf89a7", title: "Palmstrand", text: "Kritvit sand, turkost vatten och en palm som ger lagom med skugga." },
+  { img: "1551524559-8af4e6624178", title: "Puderdag", text: "Snö som faktiskt förblir vit, under en knallblå himmel." },
+  { img: "1473116763249-2faaef81ccda", title: "Sommarkväll vid havet", text: "Den där sena sommarkvällen när solen inte vill gå ner och vattnet fortfarande är varmt efter dagen." },
+  { img: "1462275646964-a0e3386b89fa", title: "Körsbärsblom", text: "Våren är på väg. Rosa kronblad överallt." },
+  { img: "1468413253725-0d5181091126", title: "En gömd strand", text: "Palmer, mjuk sand och ingen annan i närheten." },
+  { img: "1476514525535-07fb3b4ae5f1", title: "Ut och ro", text: "En träbåt på en smaragdgrön sjö, och ingenstans du måste vara." },
+  { img: "1533105079780-92b9be482077", title: "En grekisk trappa", text: "Kliv ut och där ligger Egeiska havet. Blommor i krukor, sol på väggarna." },
+  { commons: "2/2e/Fj%C3%A4llbacka_von_oben.jpg", credit: "F.A.E., CC BY-SA 3.0", title: "Fjällbacka", text: "Röda tak, kyrktornet och skärgården som breder ut sig åt alla håll. Upp på Vetteberget och bara titta." },
+  { commons: "1/15/K%C3%A4ring%C3%B6n_2134_%2827971491994%29.jpg", credit: "Bengt Nyman, CC BY 2.0", title: "Käringön", text: "Solvarma klippor, ljung i skrevorna och ett ensamt hus mot den blå himlen." },
+  { img: "1507525428034-b723cf961d3e", title: "Morgondopp", text: "Första ljuset över ett turkost hav. Vattnet är perfekt." },
+  { img: "1500382017468-9049fed747ef", title: "Midsommarljus", text: "Solen som hänger lågt över fälten klockan tio på kvällen." },
+  { img: "1605540436563-5bca919ae766", title: "Åka med vänner", text: "Hela gänget i backen, nysnö, sol och fjäll så långt ögat når. Sen afterski." },
+  { img: "1499678329028-101435549a4e", title: "Kväll vid kusten", text: "En liten hamnby som tänds i skymningen." },
+  { img: "1544551763-46a013bb70d5", title: "Under ytan", text: "Varmt blått vatten och ett helt fiskstim att simma med." },
+  { img: "1501785888041-af3ef285b470", title: "Turkos sjö", text: "Berg, tallar och vatten så klart att man ser botten." },
+  { commons: "d/d7/Early_sunset%2C_Vedhall_Sweden.jpg", credit: "Nina Hautanen, CC BY-SA 4.0", title: "Solnedgång vid Marstrand", text: "Solen sjunker ner bakom kobbarna och havet blir guld. En riktig västkustkväll." },
+  { img: "1490730141103-6cac27aaab94", title: "Ljusa nätter", text: "När himlen brinner och natten aldrig riktigt blir mörk." },
+  { img: "1490806843957-31f4c9a91c65", title: "Vår i Japan", text: "Körsbärsblom runt en snöklädd topp." },
+  { img: "1502680390469-be75c86b636f", title: "Fånga en våg", text: "Spegelblankt grönt vatten och en perfekt tub." },
+  { commons: "e/e8/Sm%C3%B6genbryggan_at_sunset.jpg", credit: "Thomas Fabian, CC BY-SA 2.0", title: "Smögenbryggan", text: "Färgglada sjöbodar som speglar sig i vattnet en ljus sommarkväll. Räkmacka någon?" },
+  { img: "1570077188670-e3a8d69ac5ff", title: "Oia i gyllene timmen", text: "Vitkalkade hus som rinner nedför klippan mot havet." },
+  { img: "1504280390367-361c6d9f38f4", title: "Vakna utomhus", text: "Dra upp tältet och skogen är redan varm och ljus." },
+  { img: "1520250497591-112f2f40a3f4", title: "Vid poolen", text: "Djungelberg, solstolar och ingenting på schemat." },
+  { img: "1523906834658-6e24ef2386f9", title: "Sommar i Venedig", text: "Gelato, kanaler och varm sten under fötterna." },
+  { img: "1495954484750-af469f2f9be5", title: "Stigen till stranden", text: "Trätrappor, strandgräs och ljudet av vågor precis framför dig." },
+  { img: "1506905925346-21bda4d32df4", title: "Ovanför molnen", text: "Det grå stannar där nere. Här uppe är det bara sol." },
+  { img: "1504681869696-d977211a5f4c", title: "Turkos från ovan", text: "Grunt vatten, vit sand och en grön kustlinje." },
+  { img: "1464822759023-fed622ff2c3b", title: "Fjällsommar", text: "Oändlig skog, snöiga toppar och långa ljusa dagar." },
+  { commons: "e/ee/Herman%C3%B6.jpg", credit: "Västkuststiftelsen, CC BY-SA 4.0", title: "Du klarade det!", text: "November är över. Fira med att klättra upp på Härmanöhuvud: varma hällar, blommande ljung och hela havet framför dig." },
+];
+
+// Scrambled hatch order (like a real advent calendar). Day 30 gets the big hatch.
+const ORDER = [7,22,1,15,28,11,4,19,26,9,13,30,2,24,17,6,21,10,27,3,14,25,8,18,29,12,5,23,16,20];
+
+// Each entry uses either `img` (an Unsplash photo id or a full URL) or `commons` (a Wikimedia Commons path).
+function imgUrl(e, w) {
+  if (e.commons) {
+    const cw = w <= 500 ? 500 : 1280; // Commons serves standard thumbnail widths
+    return `https://upload.wikimedia.org/wikipedia/commons/thumb/${e.commons}/${cw}px-${e.commons.split("/").pop()}`;
+  }
+  if (e.img.startsWith("http")) return e.img;
+  return `https://images.unsplash.com/photo-${e.img}?w=${w}&q=80&auto=format&fit=crop`;
+}
+function sourceLink(e) {
+  if (e.commons) return { href: `https://commons.wikimedia.org/wiki/File:${e.commons.split("/").pop()}`, text: `Foto: ${e.credit} · Wikimedia Commons` };
+  if (e.img.startsWith("http")) return null;
+  return { href: `https://unsplash.com/photos/${e.img}`, text: "Visa på Unsplash" };
+}
+
+// ?preview  -> all hatches unlocked (for testing)
+// ?date=2026-11-15 -> pretend it's that date
+const params = new URLSearchParams(location.search);
+const PREVIEW = params.has("preview");
+function now() {
+  if (params.get("date")) {
+    const d = new Date(params.get("date") + "T12:00:00");
+    if (!isNaN(d)) return d;
+  }
+  return new Date();
+}
+
+// Calendar targets November of the current year (or the year after, once December has passed).
+const today0 = now();
+const YEAR = today0.getFullYear();
+const END = new Date(YEAR, 11, 1); // Dec 1, 00:00 local time
+
+function unlockedUpTo(d) {
+  if (PREVIEW) return 30;
+  if (d >= END) return 30;
+  if (d.getMonth() !== 10 || d.getFullYear() !== YEAR) return 0;
+  return d.getDate();
+}
+
+const STORE_KEY = `nov-cal-${YEAR}`;
+function loadOpened() {
+  try { return new Set(JSON.parse(localStorage.getItem(STORE_KEY) || "[]")); } catch { return new Set(); }
+}
+function saveOpened(set) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify([...set])); } catch {}
+}
+const opened = loadOpened();
+
+const grid = document.getElementById("grid");
+const hatches = {};
+
+function build() {
+  const upTo = unlockedUpTo(now());
+  ORDER.forEach(day => {
+    const entry = DAYS[day - 1];
+    const b = document.createElement("button");
+    b.className = "hatch" + (day === 30 ? " big" : "");
+    b.setAttribute("aria-label", `${day} november`);
+    b.innerHTML = `<div class="inside"></div><div class="door"><span class="num">${day}</span></div>`;
+    const inside = b.querySelector(".inside");
+    if (day <= upTo) {
+      // Only load the image once it's allowed, so peeking via devtools isn't too easy.
+      inside.style.backgroundImage = `url("${imgUrl(entry, day === 30 ? 800 : 400)}")`;
+    } else {
+      b.classList.add("locked");
+    }
+    if (day === upTo && !PREVIEW && now() < END && !opened.has(day)) b.classList.add("today");
+    if ((PREVIEW || opened.has(day)) && day <= upTo) b.classList.add("open");
+    b.addEventListener("click", () => onHatch(day));
+    grid.appendChild(b);
+    hatches[day] = b;
+  });
+}
+
+function onHatch(day) {
+  const b = hatches[day];
+  const upTo = unlockedUpTo(now());
+  if (day > upTo) {
+    b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
+    const wait = day - upTo;
+    toast(upTo === 0 ? "Tålamod – kalendern börjar den 1 november." :
+          `Inte än! ${wait} ${wait === 1 ? "dag" : "dagar"} till av november först.`);
+    return;
+  }
+  if (!b.classList.contains("open")) {
+    b.classList.add("open");
+    b.classList.remove("today");
+    if (!PREVIEW) { opened.add(day); saveOpened(opened); }
+    setTimeout(() => showLightbox(day), 700);
+  } else {
+    showLightbox(day);
+  }
+  updateProgress();
+}
+
+const lb = document.getElementById("lightbox");
+function showLightbox(day) {
+  const e = DAYS[day - 1];
+  document.getElementById("lbImg").src = imgUrl(e, 1400);
+  document.getElementById("lbImg").alt = e.title;
+  document.getElementById("lbDay").textContent = `${day} november`;
+  document.getElementById("lbTitle").textContent = e.title;
+  document.getElementById("lbText").textContent = e.text;
+  const src = sourceLink(e), link = document.getElementById("lbLink");
+  link.style.display = src ? "" : "none";
+  if (src) { link.href = src.href; link.textContent = src.text; }
+  lb.classList.add("show");
+  document.getElementById("lbClose").focus();
+}
+function hideLightbox() { lb.classList.remove("show"); }
+lb.addEventListener("click", e => { if (e.target === lb) hideLightbox(); });
+document.getElementById("lbClose").addEventListener("click", hideLightbox);
+document.addEventListener("keydown", e => { if (e.key === "Escape") hideLightbox(); });
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+function updateProgress() {
+  const n = PREVIEW ? 30 : [...opened].filter(d => d <= unlockedUpTo(now())).length;
+  document.getElementById("barText").textContent = `${n} av 30 luckor öppnade`;
+  document.getElementById("barFill").style.width = (n / 30 * 100) + "%";
+}
+
+function tick() {
+  const t = now();
+  const ms = Math.max(0, END - t);
+  const s = Math.floor(ms / 1000);
+  document.getElementById("d").textContent = Math.floor(s / 86400);
+  document.getElementById("h").textContent = String(Math.floor(s / 3600) % 24).padStart(2, "0");
+  document.getElementById("m").textContent = String(Math.floor(s / 60) % 60).padStart(2, "0");
+  document.getElementById("s").textContent = String(s % 60).padStart(2, "0");
+  if (ms === 0) {
+    document.getElementById("title").textContent = "November är över!";
+    document.getElementById("sub").textContent = "Du klarade det! Alla luckor är öppna nu – njut av dem.";
+    document.getElementById("countdown").style.display = "none";
+  }
+}
+
+// ---- Rain that slowly eases off as November ends ----
+const cv = document.getElementById("rain"), ctx = cv.getContext("2d");
+let drops = [];
+function resize() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener("resize", resize); resize();
+function rainAmount() {
+  const upTo = unlockedUpTo(now());
+  if (now() >= END) return 0;
+  return Math.max(0.15, 1 - upTo / 32); // heaviest early in the month
+}
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function rainLoop() {
+  const target = Math.round(160 * rainAmount());
+  while (drops.length < target) drops.push({ x: Math.random() * cv.width, y: Math.random() * -cv.height, v: 7 + Math.random() * 7, l: 10 + Math.random() * 14 });
+  if (drops.length > target) drops.length = target;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.strokeStyle = "rgba(180,195,215,0.28)"; ctx.lineWidth = devicePixelRatio;
+  ctx.beginPath();
+  for (const d of drops) {
+    ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - 2, d.y + d.l * devicePixelRatio);
+    d.y += d.v * devicePixelRatio; d.x -= 0.4;
+    if (d.y > cv.height) { d.y = -20; d.x = Math.random() * cv.width; }
+  }
+  ctx.stroke();
+  requestAnimationFrame(rainLoop);
+}
+if (!reduceMotion) rainLoop();
+
+build();
+updateProgress();
+tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
