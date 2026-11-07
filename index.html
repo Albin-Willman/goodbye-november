@@ -44,6 +44,12 @@
     border-radius: 12px; padding: 10px 14px; min-width: 76px; backdrop-filter: blur(4px);
   }
   .unit b { display: block; font-family: Fraunces, Georgia, serif; font-size: 1.9rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+  @media (max-width: 460px) {
+    .countdown { gap: 6px; flex-wrap: nowrap; }
+    .unit { min-width: 0; flex: 1; padding: 8px 6px; }
+    .unit b { font-size: 1.5rem; }
+    .unit span { font-size: 0.62rem; letter-spacing: 0.04em; }
+  }
   .unit span { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 
   .progress { margin: 22px auto 0; max-width: 420px; }
